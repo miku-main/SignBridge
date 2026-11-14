@@ -4,13 +4,15 @@ import { normalize } from "../lib/normalize";
 import { MLP } from "../lib/mlp";
 import { findClosestWord, VOCABULARY } from "../lib/autocorrect";
 
-const LABELS = [..."ABCDEFGHIKLMNOPQRSTUVWXY", "NOTHING"];
+// Label order MUST match training order from confusion_cost.json
+const LABELS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "NOTHING", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y"];
 const STABILITY_THRESHOLD = 0.7; // seconds
 
 export default function Interpreter({ landmarksRef }) {
   const [model, setModel] = useState(null);
   const [currentLetter, setCurrentLetter] = useState("");
   const [confidence, setConfidence] = useState(0);
+  const [topPredictions, setTopPredictions] = useState([]);
   const [collectedLetters, setCollectedLetters] = useState("");
   const [suggestion, setSuggestion] = useState(null);
   const [completedWords, setCompletedWords] = useState([]);
@@ -45,8 +47,15 @@ export default function Interpreter({ landmarksRef }) {
       const result = model.predict(normalized);
       const predictedLabel = LABELS[result.index];
 
+      // Get top 3 predictions for debugging
+      const top3 = result.probabilities
+        .map((prob, idx) => ({ label: LABELS[idx], prob }))
+        .sort((a, b) => b.prob - a.prob)
+        .slice(0, 3);
+
       setCurrentLetter(predictedLabel);
       setConfidence(result.confidence);
+      setTopPredictions(top3);
       lastPredictionRef.current = predictedLabel;
 
       // Check stability for confirmation
@@ -128,8 +137,18 @@ export default function Interpreter({ landmarksRef }) {
         <div style={{ fontSize: 14, color: "#666" }}>
           Confidence: {(confidence * 100).toFixed(1)}%
         </div>
+
+        {/* Top 3 predictions for debugging */}
+        <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>
+          Top 3: {topPredictions.map((p, i) => (
+            <span key={i} style={{ marginRight: 12 }}>
+              {p.label} ({(p.prob * 100).toFixed(0)}%)
+            </span>
+          ))}
+        </div>
+
         <div style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
-          Hold a sign steady for 0.7s to confirm. Sign "NOTHING" to complete word.
+          Hold a sign steady for 0.7s to confirm. Sign "NOTHING" (resting hand) to complete word.
         </div>
       </div>
 
