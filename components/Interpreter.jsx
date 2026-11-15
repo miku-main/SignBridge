@@ -8,6 +8,41 @@ import { findClosestWord, VOCABULARY } from "../lib/autocorrect";
 const LABELS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "NOTHING", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y"];
 const STABILITY_THRESHOLD = 0.7; // seconds
 
+const css = `
+.ip{--bg:#0b0b0f;--panel:#14141b;--line:#2a2a36;--fg:#fff;--muted:#b5b5c3;--accent:#FFD400;
+  background:var(--bg);color:var(--fg);width:100%;max-width:800px;margin:0 auto;
+  text-align:center;border-radius:16px;
+  padding:clamp(12px,2vw,24px);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.ip *{box-sizing:border-box}
+.ip-title{font-size:clamp(22px,3vw,28px);font-weight:800;margin:0 0 16px}
+.ip-card{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+.ip-label{font-size:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.ip-letter{font-size:clamp(64px,10vw,112px);font-weight:900;line-height:1;color:var(--accent)}
+.ip-conf{font-size:18px;color:var(--muted);margin-top:8px}
+.ip-meter{height:10px;max-width:360px;margin:8px auto 0;background:#1e1e29;border-radius:999px;overflow:hidden}
+.ip-meter>span{display:block;height:100%;background:var(--accent);transition:width .1s}
+.ip-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
+.ip-chip{padding:4px 12px;border-radius:999px;border:2px solid var(--line);font-size:16px;color:var(--muted)}
+.ip-hint{font-size:16px;line-height:1.4;color:#8a8a99;margin:12px 0 0}
+.ip-word{font-size:clamp(40px,6vw,64px);font-weight:900;letter-spacing:.08em;min-height:1.3em;word-break:break-all}
+.ip-muted{color:#8a8a99}
+.ip-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.ip-btn{font:inherit;font-size:20px;font-weight:700;min-height:56px;padding:0 22px;border-radius:12px;
+  cursor:pointer;background:#1e1e29;color:var(--fg);border:2px solid var(--line)}
+.ip-btn:hover{border-color:#555}
+.ip-btn.primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.ip-btn.small{font-size:16px;min-height:44px;padding:0 16px}
+.ip :focus-visible{outline:4px solid #fff;outline-offset:3px}
+.ip-suggest{border-color:var(--accent)}
+.ip-suggest-word{font-size:clamp(36px,5vw,56px);font-weight:900;color:var(--accent);line-height:1.1}
+.ip-head{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ip-words{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;min-height:48px}
+.ip-tag{padding:8px 16px;border-radius:10px;background:var(--accent);color:#000;font-size:22px;font-weight:800}
+.ip-details summary{cursor:pointer;font-size:18px;color:var(--muted);padding:8px 0}
+.ip-vocab{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px}
+.ip-vocab span{padding:6px 12px;border-radius:8px;background:#1e1e29;border:2px solid var(--line);font-size:16px}
+`;
+
 export default function Interpreter({ landmarksRef }) {
   const [model, setModel] = useState(null);
   const [currentLetter, setCurrentLetter] = useState("");
@@ -116,180 +151,106 @@ export default function Interpreter({ landmarksRef }) {
   }
 
   if (!model) {
-    return <div style={{ padding: 16 }}>Loading interpreter model...</div>;
+    return (
+      <div className="ip">
+        <style>{css}</style>
+        <p className="ip-hint" role="status">Loading interpreter model…</p>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 800 }}>
-      <h2 style={{ fontSize: 24, marginBottom: 16 }}>ASL Interpreter</h2>
+    <div className="ip">
+      <style>{css}</style>
+      <h2 className="ip-title">ASL Interpreter</h2>
 
       {/* Current Prediction */}
-      <div style={{
-        background: "#f0f0f0",
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 16
-      }}>
-        <div style={{ fontSize: 14, color: "#666" }}>Current Sign:</div>
-        <div style={{ fontSize: 48, fontWeight: "bold", color: "#333" }}>
-          {currentLetter}
-        </div>
-        <div style={{ fontSize: 14, color: "#666" }}>
-          Confidence: {(confidence * 100).toFixed(1)}%
+      <section className="ip-card" aria-label="Current sign">
+        <p className="ip-label">Current sign</p>
+        <div className="ip-letter" aria-live="polite">{currentLetter || "–"}</div>
+        <div className="ip-conf">Confidence: {(confidence * 100).toFixed(1)}%</div>
+        <div className="ip-meter" aria-hidden="true">
+          <span style={{ width: `${Math.round(confidence * 100)}%` }} />
         </div>
 
         {/* Top 3 predictions for debugging */}
-        <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>
-          Top 3: {topPredictions.map((p, i) => (
-            <span key={i} style={{ marginRight: 12 }}>
-              {p.label} ({(p.prob * 100).toFixed(0)}%)
+        <div className="ip-chips">
+          {topPredictions.map((p, i) => (
+            <span key={i} className="ip-chip">
+              {p.label} {(p.prob * 100).toFixed(0)}%
             </span>
           ))}
         </div>
 
-        <div style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
-          Hold a sign steady for 0.7s to confirm. Sign "NOTHING" (resting hand) to complete word.
-        </div>
-      </div>
+        <p className="ip-hint">
+          Hold a sign steady for 0.7s to confirm. Sign “NOTHING” (resting hand) to complete the word.
+        </p>
+      </section>
 
       {/* Building Word */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, color: "#666", marginBottom: 4 }}>
-          Building Word:
-        </div>
-        <div style={{
-          fontSize: 32,
-          fontWeight: "bold",
-          minHeight: 48,
-          padding: 8,
-          background: "#e3f2fd",
-          borderRadius: 4
-        }}>
-          {collectedLetters || "(empty)"}
+      <section className="ip-card" aria-label="Word being built">
+        <p className="ip-label">Building word</p>
+        <div className="ip-word" aria-live="polite">
+          {collectedLetters || <span className="ip-muted">…</span>}
         </div>
         {collectedLetters && (
-          <button
-            onClick={clearCurrent}
-            style={{ marginTop: 8, fontSize: 12 }}>
-            Clear Current
-          </button>
+          <div className="ip-row">
+            <button className="ip-btn small" onClick={clearCurrent}>
+              Clear current
+            </button>
+          </div>
         )}
-      </div>
+      </section>
 
       {/* Suggestion */}
       {suggestion && (
-        <div style={{
-          background: "#fff3cd",
-          padding: 16,
-          borderRadius: 8,
-          marginBottom: 16,
-          border: "2px solid #ffc107"
-        }}>
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
-            Suggestion for "{collectedLetters}":
-          </div>
-          <div style={{ fontSize: 28, fontWeight: "bold", marginBottom: 8 }}>
-            {suggestion.word}
-          </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>
+        <section className="ip-card ip-suggest" aria-label="Word suggestion">
+          <p className="ip-label">Suggestion for “{collectedLetters}”</p>
+          <div className="ip-suggest-word" aria-live="polite">{suggestion.word}</div>
+          <p className="ip-hint">
             Confidence: {(suggestion.confidence * 100).toFixed(0)}%
-            (Edit distance: {suggestion.distance})
+            {" "}(edit distance: {suggestion.distance})
+          </p>
+          <div className="ip-row">
+            <button className="ip-btn primary" onClick={acceptSuggestion}>
+              ✓ Accept
+            </button>
+            <button className="ip-btn" onClick={rejectSuggestion}>
+              ✗ Reject
+            </button>
           </div>
-          <button
-            onClick={acceptSuggestion}
-            style={{
-              marginRight: 8,
-              background: "#28a745",
-              color: "white",
-              padding: "8px 16px",
-              fontSize: 14,
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer"
-            }}>
-            ✓ Accept
-          </button>
-          <button
-            onClick={rejectSuggestion}
-            style={{
-              background: "#dc3545",
-              color: "white",
-              padding: "8px 16px",
-              fontSize: 14,
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer"
-            }}>
-            ✗ Reject
-          </button>
-        </div>
+        </section>
       )}
 
       {/* Completed Words */}
-      <div>
-        <div style={{
-          fontSize: 14,
-          color: "#666",
-          marginBottom: 8,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
-          <span>Completed Words ({completedWords.length}):</span>
+      <section className="ip-card" aria-label="Completed words">
+        <div className="ip-head">
+          <p className="ip-label" style={{ margin: 0 }}>
+            Completed words ({completedWords.length})
+          </p>
           {completedWords.length > 0 && (
-            <button onClick={clearAll} style={{ fontSize: 12 }}>
-              Clear All
+            <button className="ip-btn small" onClick={clearAll}>
+              Clear all
             </button>
           )}
         </div>
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          minHeight: 40,
-          padding: 8,
-          background: "#f8f9fa",
-          borderRadius: 4
-        }}>
+        <div className="ip-words">
           {completedWords.length > 0 ? (
             completedWords.map((word, i) => (
-              <span key={i} style={{
-                padding: "6px 12px",
-                background: "#28a745",
-                color: "white",
-                borderRadius: 4,
-                fontSize: 16,
-                fontWeight: "bold"
-              }}>
-                {word}
-              </span>
+              <span key={i} className="ip-tag">{word}</span>
             ))
           ) : (
-            <span style={{ color: "#999", fontSize: 14 }}>No words yet</span>
+            <span className="ip-muted">No words yet</span>
           )}
         </div>
-      </div>
+      </section>
 
       {/* Vocabulary Reference */}
-      <details style={{ marginTop: 24 }}>
-        <summary style={{ cursor: "pointer", fontSize: 14, color: "#666" }}>
-          Demo Vocabulary (15 words)
-        </summary>
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 6,
-          marginTop: 8
-        }}>
+      <details className="ip-details">
+        <summary>Demo vocabulary (15 words)</summary>
+        <div className="ip-vocab">
           {VOCABULARY.map(word => (
-            <span key={word} style={{
-              padding: "4px 8px",
-              background: "#e0e0e0",
-              borderRadius: 4,
-              fontSize: 12
-            }}>
-              {word}
-            </span>
+            <span key={word}>{word}</span>
           ))}
         </div>
       </details>
