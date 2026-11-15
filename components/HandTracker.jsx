@@ -72,7 +72,14 @@ export default function HandTracker({ onLandmarks }) {
           } else {
             show("Ready: show your hand");
           }
-          cbRef.current?.(hand); // 21 {x,y,z} points, or null
+          // Handedness is the subject's own hand (the feed is unmirrored).
+          // The model was trained on right hands only, so mirror left hands
+          // into right-hand space before anyone else sees the landmarks.
+          const side = hand ? result.handedness?.[0]?.[0]?.categoryName ?? null : null;
+          const out = hand && side === "Left"
+            ? hand.map((p) => ({ ...p, x: 1 - p.x }))
+            : hand;
+          cbRef.current?.(out, side); // 21 {x,y,z} points (or null), "Left" | "Right" | null
         }
         rafId = requestAnimationFrame(loop);
       };
